@@ -12,5 +12,18 @@ nuek_df = spark.read \
     .option("inferSchema", "true") \
     .csv('../../data/nuek-vuh3.csv')
 
-# Виводимо схему даних
-nuek_df.printSchema()
+nuek_repart = nuek_df.repartition(2)
+
+nuek_processed = nuek_repart \
+    .where("final_priority < 3") \
+    .select("unit_id", "final_priority") \
+    .groupBy("unit_id") \
+    .count()
+
+nuek_processed = nuek_processed.where("count > 2")
+
+nuek_processed.collect()
+
+input("Press Enter to continue...5")
+
+spark.stop()
