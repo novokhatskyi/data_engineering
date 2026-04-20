@@ -8,6 +8,7 @@ __pycache__/
 .venv/
 venv/
 env/
+.env
 
 # Jupyter
 .ipynb_checkpoints/
@@ -23,3 +24,10 @@ Thumbs.db
 # Logs
 *.log
 checkpoints/
+data_engineering/.DS_Store
+.gitignore
+
+data_engineering/goit-de-hw-07/airflow_local/*
+!data_engineering/goit-de-hw-07/airflow_local/dags/
+data_engineering/goit-de-hw-07/airflow_local/dags/*
+!data_engineering/goit-de-hw-07/airflow_local/dags/medals_dag_final.py
