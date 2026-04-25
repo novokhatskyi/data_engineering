@@ -8,8 +8,12 @@ from configs import (JDBC_PASSWORD, JDBC_URL, JDBC_USER, MYSQL_JAR_PATH,
 # Створення Spark сесії
 def create_spark_session():
     spark = SparkSession.builder \
-        .config("spark.jars", MYSQL_JAR_PATH) \
-        .appName("FinalStreamingProject") \
+        .config("spark.jars", MYSQL_JAR_PATH)\
+        .config(
+            "spark.jars.packages",
+            "org.apache.spark:spark-sql-kafka-0-10_2.13:4.1.1")\
+        .config("spark.sql.shuffle.partitions", "2")\
+        .appName("FinalStreamingProject")\
         .getOrCreate()
     return spark
 

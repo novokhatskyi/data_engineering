@@ -26,6 +26,7 @@ Thumbs.db
 checkpoints/
 data_engineering/.DS_Store
 .gitignore
+configs.py
 
 data_engineering/goit-de-hw-07/airflow_local/*
 !data_engineering/goit-de-hw-07/airflow_local/dags/
