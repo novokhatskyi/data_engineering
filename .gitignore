@@ -32,3 +32,29 @@ data_engineering/goit-de-hw-07/airflow_local/*
 !data_engineering/goit-de-hw-07/airflow_local/dags/
 data_engineering/goit-de-hw-07/airflow_local/dags/*
 !data_engineering/goit-de-hw-07/airflow_local/dags/medals_dag_final.py
+
+# Airflow runtime files
+logs/
+plugins/
+config/
+airflow.cfg
+airflow.db
+webserver_config.py
+
+# Docker / local environment
+.env
+
+# Spark generated files
+*.crc
+_SUCCESS
+.checkpoint/
+checkpoints/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Data Lake generated data
+data/landing/
+data/bronze/
+data/silver/
+data/gold/
