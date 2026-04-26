@@ -54,7 +54,7 @@ metastore_db/
 derby.log
 
 # Data Lake generated data
-data/landing/
-data/bronze/
-data/silver/
-data/gold/
+final_project/second_part/data/landing/
+final_project/second_part/data/bronze/
+final_project/second_part/data/silver/
+final_project/second_part/data/gold/
