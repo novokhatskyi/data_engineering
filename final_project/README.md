@@ -1,266 +1,133 @@
-# Final Project — Data Engineering
+# Final Project: Batch Data Lake with Spark and Airflow
 
-## Опис проєкту
+## Project Overview
 
-Цей репозиторій містить фінальний проєкт з Data Engineering, який складається з двох частин:
+This project implements a simple multi-hop batch Data Lake pipeline using Apache Spark and Apache Airflow.
 
-1. **Streaming pipeline** — обробка потокових даних з Kafka за допомогою Spark Structured Streaming.
-2. **Batch Data Lake** — побудова простого multi-hop Data Lake з рівнями `landing`, `bronze`, `silver`, `gold` за допомогою Spark та Airflow.
+The pipeline processes Olympic athlete data and event results from CSV source files, transforms them through several data lake layers, and produces a final analytical dataset with average athlete statistics.
 
----
-
-# Частина 1. Streaming pipeline
-
-## Суть завдання
-
-У першій частині фінального проєкту потрібно побудувати streaming-рішення для букмекерської компанії.
-
-Фізичні дані атлетів зберігаються заздалегідь у MySQL-таблиці:
+The project follows a classic multi-layer data architecture:
 
 ```text
-olympic_dataset.athlete_bio
+Landing → Bronze → Silver → Gold
 ```
 
-Результати спортивних подій надходять у Kafka-топік у режимі потоку.
+## Data Sources
 
-Завдання полягає в тому, щоб:
+The project uses two source datasets provided by GoIT:
 
-1. Зчитати дані атлетів з MySQL.
-2. Зчитати результати подій з Kafka.
-3. Об'єднати ці дані за `athlete_id`.
-4. Очистити та підготувати числові поля `height` і `weight`.
-5. Згрупувати дані за необхідними бізнес-ознаками.
-6. Розрахувати середні значення зросту та ваги.
-7. Записати результат у вихідний Kafka-топік та/або базу даних.
+- `athlete_bio.csv`
+- `athlete_event_results.csv`
 
-## Основна логіка
-
-Пайплайн виконує такі кроки:
-
-```text
-MySQL athlete_bio
-        +
-Kafka athlete_event_results
-        ↓
-Spark Structured Streaming
-        ↓
-clean height / weight
-        ↓
-join by athlete_id
-        ↓
-aggregation
-        ↓
-output Kafka / database
-```
-
-## Очищення даних
-
-У першій частині була використана логіка очищення таблиці `athlete_bio`:
-
-```python
-df_bio_table = df_bio_table.select("*") \
-    .distinct() \
-    .where(trim(col("height")) != "") \
-    .where(trim(col("weight")) != "") \
-    .withColumn("weight", regexp_replace(col("weight"), ",", ".")) \
-    .withColumn("height", col("height").cast(DoubleType())) \
-    .withColumn("weight", col("weight").cast(DoubleType())) \
-    .dropna(subset=["height", "weight"]) \
-    .filter((col("height") >= 100) & (col("height") <= 250)) \
-    .filter((col("weight") >= 25) & (col("weight") <= 250)) \
-    .dropna(subset=["height", "weight"])
-```
-
-Ця логіка потрібна, тому що в колонці `weight` можуть бути значення з комою, наприклад:
-
-```text
-100,104
-```
-
-Перед приведенням до `DoubleType` кома замінюється на крапку.
-
----
-
-# Частина 2. Batch Data Lake
-
-## Суть завдання
-
-У другій частині фінального проєкту потрібно побудувати batch Data Lake з трирівневою архітектурою обробки даних.
-
-Дані беруться з FTP/HTTPS-сервера GoIT:
+Source URLs:
 
 ```text
 https://ftp.goit.study/neoversity/athlete_bio.csv
 https://ftp.goit.study/neoversity/athlete_event_results.csv
 ```
 
-Потрібно реалізувати обробку даних через такі рівні:
-
-```text
-landing → bronze → silver → gold
-```
-
-## Архітектура
-
-```text
-CSV files from GoIT FTP
-        ↓
-landing layer
-        ↓
-bronze layer: parquet
-        ↓
-silver layer: cleaned parquet
-        ↓
-gold layer: analytical dataset
-        ↓
-Airflow DAG
-```
-
-## Структура проєкту
+## Project Structure
 
 ```text
 second_part/
 ├── dags/
 │   └── project_solution.py
-│
 ├── jobs/
 │   ├── landing_to_bronze.py
 │   ├── bronze_to_silver.py
 │   └── silver_to_gold.py
-│
 ├── data/
 │   ├── landing/
 │   ├── bronze/
 │   ├── silver/
 │   └── gold/
-│
-├── docker-compose.yaml
 ├── Dockerfile
+├── docker-compose.yaml
 ├── requirements.txt
+├── .gitignore
 └── README.md
 ```
 
----
+## Pipeline Description
 
-## Файл `landing_to_bronze.py`
+### 1. Landing to Bronze
 
-### Призначення
-
-Файл завантажує CSV-файли з GoIT FTP/HTTPS-сервера, читає їх за допомогою Spark і зберігає у форматі Parquet у bronze layer.
-
-### Вхідні дані
+File:
 
 ```text
-https://ftp.goit.study/neoversity/athlete_bio.csv
-https://ftp.goit.study/neoversity/athlete_event_results.csv
+jobs/landing_to_bronze.py
 ```
 
-### Вихідні дані
+This Spark job:
+
+- downloads CSV files from the source URLs;
+- saves raw CSV files into the landing layer;
+- reads the CSV files using Spark;
+- writes the data in Parquet format into the bronze layer;
+- prints the final DataFrame with `df.show()` for Airflow task logs.
+
+Output:
 
 ```text
 data/landing/athlete_bio.csv
 data/landing/athlete_event_results.csv
-
 data/bronze/athlete_bio
 data/bronze/athlete_event_results
 ```
 
-### Основні кроки
+### 2. Bronze to Silver
+
+File:
 
 ```text
-download CSV
-↓
-read CSV with Spark
-↓
-write Parquet to bronze/{table}
-↓
-show final DataFrame in Airflow logs
+jobs/bronze_to_silver.py
 ```
 
----
+This Spark job:
 
-## Файл `bronze_to_silver.py`
+- reads Parquet data from the bronze layer;
+- applies text cleaning to all string columns;
+- removes duplicate rows;
+- writes cleaned data into the silver layer;
+- prints the final DataFrame with `df.show()` for Airflow task logs.
 
-### Призначення
-
-Файл читає дані з bronze layer, очищує всі текстові колонки, видаляє дублікати та записує результат у silver layer.
-
-### Вхідні дані
-
-```text
-data/bronze/athlete_bio
-data/bronze/athlete_event_results
-```
-
-### Вихідні дані
+Output:
 
 ```text
 data/silver/athlete_bio
 data/silver/athlete_event_results
 ```
 
-### Очищення тексту
+### 3. Silver to Gold
 
-Для очищення текстових колонок використовується функція:
-
-```python
-def clean_text(text):
-    return re.sub(r'[^a-zA-Z0-9,.\\"\']', '', str(text))
-```
-
-Функція обгортається у Spark UDF:
-
-```python
-clean_text_udf = udf(clean_text, StringType())
-```
-
-Потім застосовується до всіх колонок типу `StringType`.
-
-### Основні кроки
+File:
 
 ```text
-read bronze parquet
-↓
-clean string columns
-↓
-drop duplicates
-↓
-write Parquet to silver/{table}
-↓
-show final DataFrame in Airflow logs
+jobs/silver_to_gold.py
 ```
 
----
+This Spark job:
 
-## Файл `silver_to_gold.py`
+- reads both silver tables;
+- joins them by `athlete_id`;
+- cleans and converts `height` and `weight` to numeric types;
+- groups data by:
+  - `sport`
+  - `medal`
+  - `sex`
+  - `country_noc`
+- calculates average `weight` and `height`;
+- adds a processing timestamp;
+- writes the final analytical dataset into the gold layer;
+- prints the final DataFrame with `df.show()` for Airflow task logs.
 
-### Призначення
-
-Файл читає дві silver-таблиці, об'єднує їх за `athlete_id`, рахує середні значення `weight` і `height` для кожної комбінації:
-
-```text
-sport
-medal
-sex
-country_noc
-```
-
-Потім додає колонку `timestamp` і записує фінальну таблицю в gold layer.
-
-### Вхідні дані
-
-```text
-data/silver/athlete_bio
-data/silver/athlete_event_results
-```
-
-### Вихідні дані
+Output:
 
 ```text
 data/gold/avg_stats
 ```
 
-### Фінальні колонки
+Final columns:
 
 ```text
 sport
@@ -272,143 +139,47 @@ avg_height
 timestamp
 ```
 
-### Основні кроки
+## Airflow DAG
+
+File:
 
 ```text
-read silver tables
-↓
-clean and cast height / weight
-↓
-join by athlete_id
-↓
-group by sport, medal, sex, country_noc
-↓
-calculate avg_weight and avg_height
-↓
-add timestamp
-↓
-write Parquet to gold/avg_stats
-↓
-show final DataFrame in Airflow logs
+dags/project_solution.py
 ```
 
----
-
-## Файл `project_solution.py`
-
-### Призначення
-
-Файл містить Airflow DAG, який послідовно запускає три Spark jobs:
+The Airflow DAG runs all Spark jobs sequentially:
 
 ```text
-landing_to_bronze
-        ↓
-bronze_to_silver
-        ↓
-silver_to_gold
+landing_to_bronze → bronze_to_silver → silver_to_gold
 ```
 
-### DAG
+The DAG uses `SparkSubmitOperator` to execute Spark jobs.
 
-```text
-final_project_batch_datalake
-```
+## Running the Project Locally
 
-### Airflow tasks
-
-```text
-landing_to_bronze
-bronze_to_silver
-silver_to_gold
-```
-
-### Оператор
-
-Для запуску Spark jobs використовується:
-
-```python
-SparkSubmitOperator
-```
-
-Шляхи до jobs всередині Docker-контейнера:
-
-```text
-/opt/airflow/jobs/landing_to_bronze.py
-/opt/airflow/jobs/bronze_to_silver.py
-/opt/airflow/jobs/silver_to_gold.py
-```
-
----
-
-# Локальний запуск Spark jobs без Airflow
-
-Перед запуском через Airflow кожен Spark job був протестований локально.
-
-З кореня `second_part`:
-
-```bash
-python jobs/landing_to_bronze.py
-python jobs/bronze_to_silver.py
-python jobs/silver_to_gold.py
-```
-
-Після успішного запуску мають бути створені папки:
-
-```text
-data/landing
-data/bronze
-data/silver
-data/gold
-```
-
----
-
-# Запуск через Airflow
-
-## 1. Підготовка Docker
-
-Airflow запускається через Docker Compose.
-
-У `docker-compose.yaml` мають бути підключені локальні папки:
-
-```yaml
-volumes:
-  - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-  - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-  - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-  - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-  - ${AIRFLOW_PROJ_DIR:-.}/jobs:/opt/airflow/jobs
-  - ${AIRFLOW_PROJ_DIR:-.}/data:/opt/airflow/data
-```
-
-## 2. Java для Spark
-
-Для роботи `spark-submit` у контейнері потрібна Java.
-
-У проєкті використовується власний `Dockerfile`, який встановлює Java та потрібні Python-залежності.
-
-## 3. Запуск Airflow
+### 1. Build and start Airflow
 
 ```bash
 docker compose build
 docker compose up -d
 ```
 
-Airflow UI доступний за адресою:
+### 2. Open Airflow UI
 
 ```text
 http://localhost:8080
 ```
 
-Логін і пароль за замовчуванням:
+Default credentials:
 
 ```text
-airflow / airflow
+Username: airflow
+Password: airflow
 ```
 
-## 4. Spark connection
+### 3. Configure Spark connection
 
-В Airflow потрібно створити connection:
+Create an Airflow connection:
 
 ```text
 Connection Id: spark-default
@@ -416,96 +187,51 @@ Connection Type: Spark
 Host: local[*]
 ```
 
-Через CLI:
+This allows `SparkSubmitOperator` to run Spark jobs locally inside the Airflow environment.
 
-```bash
-docker compose exec airflow-apiserver airflow connections add spark-default \
-  --conn-type spark \
-  --conn-host 'local[*]'
-```
+### 4. Run the DAG
 
-Перевірка:
-
-```bash
-docker compose exec airflow-apiserver airflow connections get spark-default
-```
-
-## 5. Запуск DAG
-
-У Airflow UI потрібно знайти DAG:
+Find the DAG:
 
 ```text
 final_project_batch_datalake
 ```
 
-Після запуску задачі мають виконатися в такому порядку:
+Trigger it manually from the Airflow UI.
+
+## Requirements
+
+Main dependencies:
 
 ```text
-landing_to_bronze → bronze_to_silver → silver_to_gold
+apache-airflow-providers-apache-spark
+pyspark
+requests
 ```
 
----
+These dependencies are also listed in `requirements.txt`.
 
-# Результат
+## Expected Result
 
-Після успішного виконання DAG створюється фінальна gold-таблиця:
+After successful execution, the following data layers should be created:
 
 ```text
+data/landing/
+data/bronze/
+data/silver/
 data/gold/avg_stats
 ```
 
-Вона містить середні значення ваги та зросту спортсменів для кожної комбінації:
+Each Spark job prints its final DataFrame using `df.show()` so that the results can be reviewed in Airflow task logs.
 
-```text
-sport
-medal
-sex
-country_noc
-```
+## Screenshots for Submission
 
-Приклад фінального результату:
+The project submission should include:
 
-```text
-+-------------------+------+----+-----------+------------------+------------------+--------------------------+
-|sport              |medal |sex |country_noc|avg_weight        |avg_height        |timestamp                 |
-+-------------------+------+----+-----------+------------------+------------------+--------------------------+
-|Swimming           |None  |Male|DEN        |82.20833333333333 |189.67708333333334|2026-04-26 20:14:48.318945|
-|Athletics          |None  |Male|GBS        |62.0              |164.2             |2026-04-26 20:14:48.318945|
-|Volleyball         |None  |Female|PER      |65.4375           |173.25            |2026-04-26 20:14:48.318945|
-+-------------------+------+----+-----------+------------------+------------------+--------------------------+
-```
+- screenshot of successful Airflow DAG execution;
+- screenshots of task logs with `df.show()` output;
+- screenshot or evidence of the final gold table output.
 
----
-
-# Скриншоти для здачі
-
-Для здачі проєкту потрібно додати скриншоти:
-
-1. Логи `landing_to_bronze` з результатом `df.show()`.
-2. Логи `bronze_to_silver` з результатом `df.show()`.
-3. Логи `silver_to_gold` з результатом `gold_df.show()`.
-4. Граф Airflow DAG, де всі задачі мають статус `Success`.
-
----
-
-# Використані технології
-
-```text
-Python
-Apache Spark
-PySpark
-Apache Airflow
-SparkSubmitOperator
-Docker
-Docker Compose
-Parquet
-CSV
-Kafka
-MySQL
-```
-
----
-
-# Автор
+## Author
 
 Oleksandr Novokhatskyi
