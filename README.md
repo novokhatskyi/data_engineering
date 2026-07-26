@@ -62,7 +62,7 @@ analytical aggregates. The whole environment runs in Docker Compose.
 
 ## Projects
 
-### 📊 [`spark-sales-analytics/`](./goit-de-hw-03) — PySpark analytics on retail data
+### 📊 [`spark-sales-analytics/`](./spark-sales-analytics) — PySpark analytics on retail data
 
 Analytical processing of three related datasets (users, purchases, products) with PySpark:
 schema inspection, null-filtering, joins across all three tables, and aggregation of purchase
@@ -73,7 +73,7 @@ tables.
 
 ---
 
-### ⚙️ [`spark-ui-optimization/`](./goit-de-hw-04) — Spark UI and execution analysis
+### ⚙️ [`spark-ui-optimization/`](./spark-ui-optimization) — Spark UI and execution analysis
 
 Three Spark scripts examined through the Spark UI to understand how the engine actually executes
 a job: stages, shuffles, partitioning and physical plans. Includes a written analysis of the
@@ -83,7 +83,7 @@ observed execution behaviour.
 
 ---
 
-### 🔄 [`kafka-streaming-pipeline/`](./goit-de-hw-05) — Kafka producer/consumer pipeline
+### 🔄 [`kafka-streaming-pipeline/`](./kafka-streaming-pipeline) — Kafka producer/consumer pipeline
 
 An end-to-end Kafka pipeline: topic creation, a producer publishing records into an input topic,
 a processing stage that consumes, transforms and republishes to an output topic, and a final
@@ -94,7 +94,7 @@ group and offset configuration.
 
 ---
 
-### 🌡️ [`iot-streaming-alerts/`](./goit-de-hw-06) — Real-time IoT alerting
+### 🌡️ [`iot-streaming-alerts/`](./iot-streaming-alerts) — Real-time IoT alerting
 
 Simulated building sensors publish temperature and humidity readings to Kafka. A Spark
 Structured Streaming job reads the stream, applies windowed aggregation, and cross-joins the
@@ -105,7 +105,7 @@ without touching the streaming code. Triggered alerts are written back to a dedi
 
 ---
 
-### 🗓️ [`airflow-medals-dag/`](./goit-de-hw-07) — Airflow DAG with branching and sensors
+### 🗓️ [`airflow-medals-dag/`](./airflow-medals-dag) — Airflow DAG with branching and sensors
 
 A scheduled Airflow DAG demonstrating non-linear control flow: creates the database schema,
 randomly picks a medal type, branches into one of three counting tasks via
